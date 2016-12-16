@@ -3,4 +3,4 @@
 Used to prepare the libraries.
 
 # Copyright
-Bo Zhou<Bo.Schwarzstein@gmail.com>
+Bo Zhou (Bo.Schwarzstein@gmail.com)
