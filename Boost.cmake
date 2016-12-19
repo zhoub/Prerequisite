@@ -46,6 +46,8 @@ IF(MSVC)
 
         #
         SET(BOOST_BUILD_TARGET ${BOOST_TARGET}-${PLATFORM})
+        MESSAGE(${BOOST_BUILD_TARGET})
+
         ExternalProject_Add(${BOOST_BUILD_TARGET}
             SOURCE_DIR ${BOOST_SOURCE_DIR}
             CONFIGURE_COMMAND ""
@@ -91,6 +93,8 @@ ELSEIF(UNIX)
 
                 #
                 SET(BOOST_INSTALL_TARGET ${BOOST_TARGET}-${PLATFORM}-{BUILD_TYPE})
+                MESSAGE(${BOOST_INSTALL_TARGET})
+
                 ExternalProject_Add(${BOOST_INSTALL_TARGET}
                     SOURCE_DIR ${BOOST_SOURCE_DIR}
                     CONFIGURE_COMMAND ""

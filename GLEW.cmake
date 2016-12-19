@@ -30,11 +30,12 @@ IF(MSVC)
 
             IF(${CONFIGURATION_TYPE} STREQUAL "Debug")
                 LIST(APPEND CMAKE_ARGS "-DCMAKE_C_FLAGS_DEBUG=\"/D_DEBUG /MDd /Zi /Ob0 /Od\"")
+                LIST(APPEND CMAKE_ARGS "-DCMAKE_CXX_FLAGS_DEBUG=\"/D_DEBUG /MDd /Zi /Ob0 /Od\"")
             ENDIF()
 
             #
             SET(GLEW_INSTALL_TARGET ${GLEW_TARGET}-${PLATFORM}-${CONFIGURATION_TYPE})
-            MESSAGE("${GLEW_INSTALL_TARGET} ${INSTALL_DIR}")
+            MESSAGE(${GLEW_INSTALL_TARGET})
 
             ExternalProject_Add(${GLEW_INSTALL_TARGET}
                 DEPENDS ${GLEW_DOWNLOAD_TARGET}
