@@ -69,7 +69,7 @@ ELSEIF(UNIX)
                 SET(CXX_FLAGS
                     "-std=c++11"
                     "-stdlib=libc++"
-                    "-mmacosx-version-min=${OSX_TARGET_MOUNTAIN_LION}"
+                    "-mmacosx-version-min=${OSX_TARGET_MAVERICKS}"
                     "-isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.9.sdk")
             ELSE()
                 SET(CXX_FLAGS
