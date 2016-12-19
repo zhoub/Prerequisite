@@ -2,11 +2,11 @@
 # Boost 1.61
 #
 
-OPTION(USE_LOCAL_BOOST OFF)
-IF(USE_LOCAL_BOOST)
+OPTION(BOOST_USE_LOCAL OFF)
+IF(BOOST_USE_LOCAL)
     FIND_PATH(BOOST_SOURCE_DIR NAMES boost.css REQUIRED)
     FILE(STRINGS ${BOOST_SOURCE_DIR}/boost/version.hpp BOOST_LIB_VERSION_MACRO REGEX "#define BOOST_LIB_VERSION")
-    STRING(REGEX MATCH "[0-9_]+" BOOST_LIB_VERSION_MACRO ${BOOST_LIB_VERSION})
+    STRING(REGEX MATCH "1_[0-9]+" BOOST_LIB_VERSION ${BOOST_LIB_VERSION_MACRO})
     MESSAGE("Found Boost ${BOOST_LIB_VERSION}")
 
     SET(BOOST_TARGET "Boost-${BOOST_LIB_VERSION}")
@@ -25,9 +25,34 @@ ELSE()
 ENDIF()
 
 #
+SET(BOOST_WITH_COMPONENTS --with-locale
+    --with-system
+    --with-thread
+    --with-chrono
+    --with-date_time
+    --with-filesystem
+    --with-program_options)
+
+#
+OPTION(BOOST_WITH_PYTHON OFF)
+IF(BOOST_WITH_PYTHON)
+    FIND_PACKAGE(PythonInterp REQUIRED)
+ENDIF()
+
+IF(BOOST_WITH_PYTHON)
+    LIST(APPEND BOOST_WITH_COMPONENTS --with-python)
+ENDIF()
+
+#
 IF(MSVC)
     SET(BOOST_WIN64_VS2012_OPTIONS "${PLATFORM_WIN64_VS2012}" "toolset=msvc-12.0" "address-model=64")
     SET(BOOST_WIN64_VS2015_OPTIONS "${PLATFORM_WIN64_VS2015}" "toolset=msvc-14.0" "address-model=64")
+
+    IF(BOOST_WITH_PYTHON)
+        SET(BOOST_BOOTSTRAP_COMMAND bootstrap.bat --with-python=${PYTHON_EXECUTABLE})
+    ELSE()
+        SET(BOOST_BOOTSTRAP_COMMAND bootstrap.bat)
+    ENDIF()
 
     FOREACH(OPTIONS "${BOOST_WIN64_VS2012_OPTIONS}" "${BOOST_WIN64_VS2015_OPTIONS}")
         LIST(GET OPTIONS 0 PLATFORM)
@@ -35,25 +60,32 @@ IF(MSVC)
         LIST(GET OPTIONS 2 ADDRESS_MODEL)
 
         #
-        SET(STAGE_DIR "${CMAKE_INSTALL_PREFIX}/${BOOST_TARGET}/${PLATFORM}")
+        FOREACH(BUILD_TYPE "Debug" "Release")
+            #
+            SET(STAGE_DIR "${CMAKE_INSTALL_PREFIX}/${PLATFORM}/${BUILD_TYPE}/${BOOST_TARGET}")
 
-        SET(B2_COMMAND b2
-            ${TOOLSET}
-            ${ADDRESS_MODEL}
-            --with-locale --with-system --with-thread --with-chrono --with-date_time --with-filesystem --with-program_options
-            link=static,shared runtime-link=shared threading=multi variant=debug,release
-            --stagedir=${STAGE_DIR} stage)
+            STRING(TOLOWER ${BUILD_TYPE} VARIANT_TYPE)
+            SET(B2_COMMAND b2
+                ${TOOLSET}
+                ${ADDRESS_MODEL}
+                ${BOOST_WITH_COMPONENTS}
+                link=static,shared runtime-link=shared threading=multi variant=${VARIANT_TYPE}
+                --stagedir=${STAGE_DIR} stage)
 
-        #
-        SET(BOOST_BUILD_TARGET ${BOOST_TARGET}-${PLATFORM})
-        MESSAGE(${BOOST_BUILD_TARGET})
+            #
+            SET(BOOST_INSTALL_TARGET ${BOOST_TARGET}-${PLATFORM}-${BUILD_TYPE})
+            MESSAGE(${BOOST_INSTALL_TARGET})
 
-        ExternalProject_Add(${BOOST_BUILD_TARGET}
-            SOURCE_DIR ${BOOST_SOURCE_DIR}
-            CONFIGURE_COMMAND ""
-            BUILD_IN_SOURCE 1
-            BUILD_COMMAND bootstrap.bat COMMAND ${B2_COMMAND}
-            INSTALL_COMMAND "")
+            ExternalProject_Add(${BOOST_INSTALL_TARGET}
+                SOURCE_DIR ${BOOST_SOURCE_DIR}
+                CONFIGURE_COMMAND ""
+                BUILD_IN_SOURCE 1
+                BUILD_COMMAND bootstrap.bat COMMAND ${B2_COMMAND}
+                INSTALL_COMMAND "")
+            IF(NOT BOOST_USE_LOCAL)
+                ADD_DEPENDENCIES(${BOOST_INSTALL_TARGET} ${BOOST_DOWNLOAD_TARGET})
+            ENDIF()
+        ENDFOREACH()
     ENDFOREACH()
 ELSEIF(UNIX)
     IF(APPLE)
@@ -82,17 +114,18 @@ ELSEIF(UNIX)
             #
             FOREACH(BUILD_TYPE "Debug" "Release")
                 #
-                SET(STAGE_DIR "${CMAKE_INSTALL_PREFIX}/${PLATFORM}/${VARIANT}/${BOOST_TARGET}")
+                SET(STAGE_DIR "${CMAKE_INSTALL_PREFIX}/${PLATFORM}/${BUILD_TYPE}/${BOOST_TARGET}")
 
+                STRING(TOLOWER ${BUILD_TYPE} VARIANT_TYPE)
                 SET(B2_COMMAND b2
                     ${TOOLSET}
                     ${ADDRESS_MODEL}
-                    --with-locale --with-system --with-thread --with-chrono --with-date_time --with-filesystem --with-program_options
-                    link=static,shared runtime-link=shared threading=multi variant=${BUILD_TYPE}
+                    ${BOOST_WITH_COMPONENTS}
+                    link=static,shared runtime-link=shared threading=multi variant=${VARIANT_TYPE}
                     --stagedir=${STAGE_DIR} stage)
 
                 #
-                SET(BOOST_INSTALL_TARGET ${BOOST_TARGET}-${PLATFORM}-{BUILD_TYPE})
+                SET(BOOST_INSTALL_TARGET ${BOOST_TARGET}-${PLATFORM}-${BUILD_TYPE})
                 MESSAGE(${BOOST_INSTALL_TARGET})
 
                 ExternalProject_Add(${BOOST_INSTALL_TARGET}
@@ -101,6 +134,9 @@ ELSEIF(UNIX)
                     BUILD_IN_SOURCE 1
                     BUILD_COMMAND bootstrap.sh COMMAND ${B2_COMMAND}
                     INSTALL_COMMAND "")
+                IF(NOT BOOST_USE_LOCAL)
+                    ADD_DEPENDENCIES(${BOOST_INSTALL_TARGET} ${BOOST_DOWNLOAD_TARGET})
+                ENDIF()
             ENDFOREACH()
         ENDFOREACH()
     ELSE()
